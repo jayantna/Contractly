@@ -36,7 +36,7 @@ sepolia = { key = "${ETHERSCAN_API_KEY}" }
 
 
 [fmt]
-line_length = 120
+line_length = 512
 tab_width = 4
 quote_style = "double"
 bracket_spacing = true

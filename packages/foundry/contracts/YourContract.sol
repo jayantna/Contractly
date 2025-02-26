@@ -53,11 +53,8 @@ contract YourContract {
         userGreetingCounter[msg.sender] += 1;
 
         // msg.value: built-in global variable that represents the amount of ether sent with the transaction
-        if (msg.value > 0) {
-            premium = true;
-        } else {
-            premium = false;
-        }
+        if (msg.value > 0) premium = true;
+        else premium = false;
 
         // emit: keyword used to trigger an event
         emit GreetingChange(msg.sender, _newGreeting, msg.value > 0, msg.value);

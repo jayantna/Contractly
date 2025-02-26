@@ -28,9 +28,7 @@ contract ScaffoldETHDeploy is Script {
     /// @notice Use this modifier on your run() function on your deploy scripts
     modifier ScaffoldEthDeployerRunner() {
         deployer = _startBroadcast();
-        if (deployer == address(0)) {
-            revert InvalidPrivateKey("Invalid private key");
-        }
+        if (deployer == address(0)) revert InvalidPrivateKey("Invalid private key");
         _;
         _stopBroadcast();
         exportDeployments();
@@ -87,9 +85,7 @@ contract ScaffoldETHDeploy is Script {
     function anvil_setBalance(address addr, uint256 amount) public {
         string memory addressString = vm.toString(addr);
         string memory amountString = vm.toString(amount);
-        string memory requestPayload = string.concat(
-            '{"method":"anvil_setBalance","params":["', addressString, '","', amountString, '"],"id":1,"jsonrpc":"2.0"}'
-        );
+        string memory requestPayload = string.concat('{"method":"anvil_setBalance","params":["', addressString, '","', amountString, '"],"id":1,"jsonrpc":"2.0"}');
 
         string[] memory inputs = new string[](8);
         inputs[0] = "curl";
@@ -109,9 +105,7 @@ contract ScaffoldETHDeploy is Script {
         string[2][] memory allRpcUrls = vm.rpcUrls();
         for (uint256 i = 0; i < allRpcUrls.length; i++) {
             try vm.createSelectFork(allRpcUrls[i][1]) {
-                if (block.chainid == thisChainId) {
-                    return allRpcUrls[i][0];
-                }
+                if (block.chainid == thisChainId) return allRpcUrls[i][0];
             } catch {
                 continue;
             }

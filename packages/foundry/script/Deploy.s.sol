@@ -11,6 +11,7 @@ import { DeployTimeGuarantee } from "./DeployTimeGuarantee.s.sol";
  *
  * Example: yarn deploy # runs this script(without`--file` flag)
  */
+
 contract DeployScript is ScaffoldETHDeploy {
     function run() external {
         // Deploys all your contracts sequentially

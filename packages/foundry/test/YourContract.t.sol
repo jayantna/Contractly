@@ -12,6 +12,6 @@ contract YourContractTest is Test {
     }
 
     function testMessageOnDeployment() public view {
-        require(keccak256(bytes(yourContract.greeting())) == keccak256("Building Unstoppable Apps!!!"));
+        require(keccak256(bytes(yourContract.greeting())) == keccak256("Building Unstoppable Apps!!!"), "");
     }
 }

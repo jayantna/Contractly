@@ -79,6 +79,11 @@ contract Contractly {
         _;
     }
 
+    modifier onlyAuthorizedContract() {
+        require(authorizedContracts[msg.sender], "Only authorized contracts can call this function");
+        _;
+    }
+
     // ======== Core Functions ========
 
     /**
@@ -91,7 +96,7 @@ contract Contractly {
      * @param _isStakingRequired Whether parties must stake funds
      * @param _stakingAmount Amount each party must stake (in wei)
      */
-    function createAgreement(string memory _title, string memory _description, address[] memory _parties, uint256 _expirationTime, bool _requiresAllPartiesToSign, bool _isStakingRequired, uint256 _stakingAmount) public returns (uint256) {
+    function createAgreement(string memory _title, string memory _description, address[] memory _parties, uint256 _expirationTime, bool _requiresAllPartiesToSign, bool _isStakingRequired, uint256 _stakingAmount) external returns (uint256) {
         require(_parties.length > 0, "Must include at least one party");
         require(_expirationTime > block.timestamp, "Expiration time must be in the future");
 
@@ -205,11 +210,11 @@ contract Contractly {
         }
     }
 
-    function fulfillAgreement(uint256 _agreementId) public agreementExists(_agreementId) {
+    function fulfillAgreement(uint256 _agreementId) external 
+        agreementExists(_agreementId) 
+        onlyAuthorizedContract 
+    {
         Agreement storage agreement = agreements[_agreementId];
-
-        // Only allow calls from authorized contracts or the system
-        require(msg.sender == owner || isAuthorizedContract(msg.sender), "Only authorized contracts can mark as fulfilled");
         require(agreement.status == AgreementStatus.Active, "Agreement must be active");
 
         agreement.status = AgreementStatus.Fulfilled;
@@ -229,11 +234,11 @@ contract Contractly {
         emit AgreementFulfilled(_agreementId);
     }
 
-    function breachAgreement(uint256 _agreementId, address _breachingParty) public agreementExists(_agreementId) {
+    function breachAgreement(uint256 _agreementId, address _breachingParty) public 
+        agreementExists(_agreementId)
+        onlyAuthorizedContract 
+    {
         Agreement storage agreement = agreements[_agreementId];
-
-        // Only allow calls from authorized contracts or the system
-        require(msg.sender == owner || isAuthorizedContract(msg.sender), "Only authorized contracts can mark as breached");
         require(agreement.status == AgreementStatus.Active, "Agreement must be active");
 
         agreement.status = AgreementStatus.Breached;
@@ -290,12 +295,6 @@ contract Contractly {
 
     // ======== Utility Functions ========
 
-    /**
-     * @dev Checks if an address is a party to an agreement
-     * @param _agreementId The ID of the agreement
-     * @param _address The address to check
-     * @return bool True if the address is a party to the agreement
-     */
     function isAgreementParty(uint256 _agreementId, address _address) public view agreementExists(_agreementId) returns (bool) {
         for (uint256 i = 0; i < agreements[_agreementId].parties.length; i++) {
             if (agreements[_agreementId].parties[i] == _address) return true;
@@ -303,21 +302,10 @@ contract Contractly {
         return false;
     }
 
-    /**
-     * @dev Gets the status of an agreement
-     * @param _agreementId The ID of the agreement
-     * @return AgreementStatus The current status of the agreement
-     */
     function getAgreementStatus(uint256 _agreementId) public view agreementExists(_agreementId) returns (AgreementStatus) {
         return agreements[_agreementId].status;
     }
 
-    /**
-     * @dev Gets the staked amount for a party in an agreement
-     * @param _agreementId The ID of the agreement
-     * @param _party The address of the party
-     * @return uint256 The amount staked by the party
-     */
     function getStakedAmount(uint256 _agreementId, address _party) public view agreementExists(_agreementId) returns (uint256) {
         return stakedFunds[_agreementId][_party];
     }

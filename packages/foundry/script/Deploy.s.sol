@@ -2,9 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./DeployHelpers.s.sol";
-import { DeployYourContract } from "./DeployYourContract.s.sol";
 import { DeployContractly } from "./DeployContractly.s.sol";
-import { DeployTimeGuarantee } from "./DeployTimeGuarantee.s.sol";
 /**
  * @notice Main deployment script for all contracts
  * @dev Run this when you want to deploy multiple contracts at once
@@ -15,17 +13,9 @@ import { DeployTimeGuarantee } from "./DeployTimeGuarantee.s.sol";
 contract DeployScript is ScaffoldETHDeploy {
     function run() external {
         // Deploys all your contracts sequentially
-        // Add new deployments here when needed
-
-        DeployYourContract deployYourContract = new DeployYourContract();
-        deployYourContract.run();
-
-        // Deploy another contract
         // DeployMyContract myContract = new DeployMyContract();
         // myContract.run();
         DeployContractly deployContractly = new DeployContractly();
         deployContractly.run();
-        DeployTimeGuarantee deployTimeGuarantee = new DeployTimeGuarantee();
-        deployTimeGuarantee.run(address(deployContractly));
     }
 }

@@ -12,12 +12,13 @@ contract Contractly {
     mapping(address => bool) public authorizedContracts; // Mapping to track authorized contracts
 
     enum AgreementStatus {
-        Pending,
-        Active,
-        Fulfilled,
-        Breached,
-        Disputed,
-        Canceled
+        Pending,   // Initial state when created
+        Locked,    // Locked for execution, requires all conditions met
+        Active,    // Active and enforceable
+        Fulfilled, // Successfully completed
+        Breached,  // Agreement terms were violated
+        Disputed,  // Under dispute resolution
+        Canceled   // Terminated before completion
     }
 
     struct Agreement {
@@ -44,6 +45,7 @@ contract Contractly {
     // ======== Events ========
     event AgreementCreated(uint256 agreementId, address creator, string title);
     event AgreementSigned(uint256 agreementId, address party);
+    event AgreementLocked(uint256 agreementId); // New event for locking
     event AgreementActivated(uint256 agreementId);
     event AgreementFulfilled(uint256 agreementId);
     event AgreementBreached(uint256 agreementId, address breachingParty);
@@ -136,34 +138,10 @@ contract Contractly {
 
         emit AgreementSigned(_agreementId, msg.sender);
 
-        // Check if all required parties have signed and if staking conditions are met
-        bool allSigned = true;
-        if (agreement.requiresAllPartiesToSign) {
-            for (uint256 i = 0; i < agreement.parties.length; i++) {
-                if (!agreement.hasSignedAgreement[agreement.parties[i]]) {
-                    allSigned = false;
-                    break;
-                }
-            }
-        }
-
-        // Check if staking conditions are met
-        bool stakingMet = !agreement.isStakingRequired;
-        if (agreement.isStakingRequired) {
-            stakingMet = true;
-            for (uint256 i = 0; i < agreement.parties.length; i++) {
-                address party = agreement.parties[i];
-                if (stakedFunds[_agreementId][party] < agreement.stakingAmount) {
-                    stakingMet = false;
-                    break;
-                }
-            }
-        }
-
-        // Activate the agreement if conditions are met
-        if (allSigned && stakingMet) {
-            agreement.status = AgreementStatus.Active;
-            emit AgreementActivated(_agreementId);
+        // Check if all conditions are met to move to locked state
+        if (_checkAllConditionsMet(_agreementId)) {
+            // Move to Locked state instead of directly to Active
+            lockAgreement(_agreementId);
         }
     }
 
@@ -183,7 +161,22 @@ contract Contractly {
 
         emit FundsStaked(_agreementId, msg.sender, msg.value);
 
-        // Check if all conditions are met to activate
+        // Check if all conditions are met to move to locked state
+        if (_checkAllConditionsMet(_agreementId)) {
+            // Move to Locked state instead of directly to Active
+            lockAgreement(_agreementId);
+        }
+    }
+
+    /**
+     * @dev Internal function to check if all conditions for locking are met
+     * @param _agreementId The ID of the agreement to check
+     * @return bool True if all conditions are met, false otherwise
+     */
+    function _checkAllConditionsMet(uint256 _agreementId) internal view returns (bool) {
+        Agreement storage agreement = agreements[_agreementId];
+        
+        // Check if all required parties have signed
         bool allSigned = true;
         if (agreement.requiresAllPartiesToSign) {
             for (uint256 i = 0; i < agreement.parties.length; i++) {
@@ -194,20 +187,54 @@ contract Contractly {
             }
         }
 
-        bool allStaked = true;
-        for (uint256 i = 0; i < agreement.parties.length; i++) {
-            address party = agreement.parties[i];
-            if (stakedFunds[_agreementId][party] < agreement.stakingAmount) {
-                allStaked = false;
-                break;
+        // Check if all required staking is completed
+        bool allStaked = !agreement.isStakingRequired; // True if staking not required
+        if (agreement.isStakingRequired) {
+            allStaked = true; // Assume true, then check each party
+            for (uint256 i = 0; i < agreement.parties.length; i++) {
+                address party = agreement.parties[i];
+                if (stakedFunds[_agreementId][party] < agreement.stakingAmount) {
+                    allStaked = false;
+                    break;
+                }
             }
         }
 
-        // Activate the agreement if conditions are met
-        if (allSigned && allStaked) {
-            agreement.status = AgreementStatus.Active;
-            emit AgreementActivated(_agreementId);
-        }
+        return allSigned && allStaked;
+    }
+
+    /**
+     * @dev Locks an agreement when all required conditions are met
+     * @param _agreementId The ID of the agreement to lock
+     */
+    function lockAgreement(uint256 _agreementId) internal agreementExists(_agreementId) {
+        Agreement storage agreement = agreements[_agreementId];
+        
+        require(agreement.status == AgreementStatus.Pending, "Agreement must be in Pending status");
+        require(_checkAllConditionsMet(_agreementId), "Not all conditions are met for locking");
+        
+        // Set status to Locked
+        agreement.status = AgreementStatus.Locked;
+        
+        emit AgreementLocked(_agreementId);
+    }
+
+    /**
+     * @dev Activates a locked agreement - can only be called by authorized contracts
+     * @param _agreementId The ID of the agreement to activate
+     */
+    function activateAgreement(uint256 _agreementId) external 
+        agreementExists(_agreementId) 
+        onlyAuthorizedContract 
+    {
+        Agreement storage agreement = agreements[_agreementId];
+        
+        require(agreement.status == AgreementStatus.Locked, "Agreement must be in Locked status");
+        
+        // Set status to Active
+        agreement.status = AgreementStatus.Active;
+        
+        emit AgreementActivated(_agreementId);
     }
 
     function fulfillAgreement(uint256 _agreementId) external 
@@ -293,7 +320,7 @@ contract Contractly {
         authorizedContracts[_contractAddress] = false;
     }
 
-    // ======== Utility Functions ========
+    // ======== Getter Functions ========
 
     function isAgreementParty(uint256 _agreementId, address _address) public view agreementExists(_agreementId) returns (bool) {
         for (uint256 i = 0; i < agreements[_agreementId].parties.length; i++) {
@@ -312,5 +339,14 @@ contract Contractly {
 
     function isAuthorizedContract(address _contractAddress) public view returns (bool) {
         return authorizedContracts[_contractAddress];
+    }
+
+    /**
+     * @dev Checks if all conditions are met for an agreement to be locked
+     * @param _agreementId The ID of the agreement to check
+     * @return bool True if all conditions are met, false otherwise
+     */
+    function areAllConditionsMet(uint256 _agreementId) public view agreementExists(_agreementId) returns (bool) {
+        return _checkAllConditionsMet(_agreementId);
     }
 }

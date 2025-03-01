@@ -1,5 +1,8 @@
 # 🏗 Scaffold-ETH 2
 
+Contractly: https://sepolia.etherscan.io/address/0xf76c12d8f8e18e6c2276b143887b82254f585088
+Agreement: https://sepolia.etherscan.io/address/0x8ceb2ad172cdd8b0d932904e657c456382ba0aee
+
 # Contract Interaction Diagrams (Mermaid)
 
 ## 1. Basic Contract Flow

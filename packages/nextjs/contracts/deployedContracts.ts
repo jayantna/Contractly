@@ -6,153 +6,8 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 
 const deployedContracts = {
   31337: {
-    YourContract: {
-      address: "0xf7cd8fa9b94db2aa972023b379c7f72c65e4de9d",
-      abi: [
-        {
-          type: "constructor",
-          inputs: [
-            {
-              name: "_owner",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "receive",
-          stateMutability: "payable",
-        },
-        {
-          type: "function",
-          name: "greeting",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "owner",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "premium",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "setGreeting",
-          inputs: [
-            {
-              name: "_newGreeting",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
-        },
-        {
-          type: "function",
-          name: "totalCounter",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "userGreetingCounter",
-          inputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "withdraw",
-          inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "event",
-          name: "GreetingChange",
-          inputs: [
-            {
-              name: "greetingSetter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "newGreeting",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "premium",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
-            },
-            {
-              name: "value",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-      ],
-      inheritedFunctions: {},
-      deploymentFile: "run-1740568542.json",
-      deploymentScript: "Deploy.s.sol",
-    },
     Contractly: {
-      address: "0x12975173b87f7595ee45dffb2ab812ece596bf84",
+      address: "0x5845d39e5ccb14a4781985de580b86d5b80f05af",
       abi: [
         {
           type: "constructor",
@@ -163,6 +18,60 @@ const deployedContracts = {
               internalType: "address",
             },
           ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "activateAgreement",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "addAuthorizedContract",
+          inputs: [
+            {
+              name: "_contractAddress",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "addParty",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_partyAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_requiresStaking",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "_stakeRatio",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -200,11 +109,6 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
               name: "creator",
               type: "address",
               internalType: "address",
@@ -220,7 +124,12 @@ const deployedContracts = {
               internalType: "uint256",
             },
             {
-              name: "stakingAmount",
+              name: "disputeWindowDuration",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalStakingAmount",
               type: "uint256",
               internalType: "uint256",
             },
@@ -236,6 +145,25 @@ const deployedContracts = {
             },
             {
               name: "isStakingRequired",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "authorizedContracts",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
               type: "bool",
               internalType: "bool",
             },
@@ -270,14 +198,9 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "_description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "_parties",
-              type: "address[]",
-              internalType: "address[]",
+              name: "_creator",
+              type: "address",
+              internalType: "address",
             },
             {
               name: "_expirationTime",
@@ -285,9 +208,9 @@ const deployedContracts = {
               internalType: "uint256",
             },
             {
-              name: "_requiresAllPartiesToSign",
-              type: "bool",
-              internalType: "bool",
+              name: "_totalStakingAmount",
+              type: "uint256",
+              internalType: "uint256",
             },
             {
               name: "_isStakingRequired",
@@ -295,9 +218,9 @@ const deployedContracts = {
               internalType: "bool",
             },
             {
-              name: "_stakingAmount",
-              type: "uint256",
-              internalType: "uint256",
+              name: "_requiresAllPartiesToSign",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           outputs: [
@@ -324,6 +247,75 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getAgreement",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "id",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "title",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "creator",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "creationTime",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "expirationTime",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "disputeWindowDuration",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalStakingAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "status",
+              type: "uint8",
+              internalType: "enum Contractly.AgreementStatus",
+            },
+            {
+              name: "requiresAllPartiesToSign",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "isStakingRequired",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "partyAddresses",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getAgreementStatus",
           inputs: [
             {
@@ -337,6 +329,102 @@ const deployedContracts = {
               name: "",
               type: "uint8",
               internalType: "enum Contractly.AgreementStatus",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getParty",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_partyAddress",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "requiresStaking",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "stakeRatio",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "hasSigned",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPartyAddressAtIndex",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_index",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPartyAddresses",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getPartyCount",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -367,15 +455,10 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isParty",
+          name: "isAuthorizedContract",
           inputs: [
             {
-              name: "_agreementId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "_address",
+              name: "_contractAddress",
               type: "address",
               internalType: "address",
             },
@@ -388,6 +471,19 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "lockAgreement",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -404,12 +500,30 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "removeAuthorizedContract",
+          inputs: [
+            {
+              name: "_contractAddress",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "signAgreement",
           inputs: [
             {
               name: "_agreementId",
               type: "uint256",
               internalType: "uint256",
+            },
+            {
+              name: "_signer",
+              type: "address",
+              internalType: "address",
             },
           ],
           outputs: [],
@@ -524,6 +638,19 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "AgreementLocked",
+          inputs: [
+            {
+              name: "agreementId",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "AgreementSigned",
           inputs: [
             {
@@ -591,13 +718,113 @@ const deployedContracts = {
           ],
           anonymous: false,
         },
+        {
+          type: "error",
+          name: "AgreementMustBeActive",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "AgreementNotFound",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "AlreadySigned",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "AlreadyStaked",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ConditionsNotMet",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "FundsDistributionFailed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "FundsReturnFailed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "FundsTransferFailed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "FutureExpirationRequired",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidStakingAmount",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotActiveStatus",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotAgreementParty",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotLockedStatus",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotPendingStatus",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "OnlyOwner",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PartyNotFound",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "StakeRatioTooHigh",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "StakingNotRequired",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TotalStakeRatioExceeds100",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "UnauthorizedContract",
+          inputs: [],
+        },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1740568542.json",
+      deploymentFile: "run-1740746371.json",
       deploymentScript: "Deploy.s.sol",
     },
-    TimeGuarantee: {
-      address: "0x82dc47734901ee7d4f4232f398752cb9dd5daccc",
+    Agreement: {
+      address: "0xf57d780b983ff930e7699d382614de13804cff67",
       abi: [
         {
           type: "constructor",
@@ -612,15 +839,10 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "confirmDelivery",
+          name: "activateAgreement",
           inputs: [
             {
               name: "_agreementId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "_deliveryTime",
               type: "uint256",
               internalType: "uint256",
             },
@@ -630,7 +852,25 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "contractlyCore",
+          name: "breachAgreement",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "_breachingParty",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "contractly",
           inputs: [],
           outputs: [
             {
@@ -643,25 +883,20 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "createTimeGuarantee",
+          name: "createAgreement",
           inputs: [
             {
-              name: "_orderReference",
+              name: "_title",
               type: "string",
               internalType: "string",
             },
             {
-              name: "_customer",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_promisedDeliveryTime",
+              name: "_expirationTime",
               type: "uint256",
               internalType: "uint256",
             },
             {
-              name: "_guaranteeAmount",
+              name: "_totalStakingAmount",
               type: "uint256",
               internalType: "uint256",
             },
@@ -673,159 +908,157 @@ const deployedContracts = {
               internalType: "uint256",
             },
           ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "fulfillAgreement",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "getAgreementDetails",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "id",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "title",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "creator",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "creationTime",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "expirationTime",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "disputeWindowDuration",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalStakingAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "status",
+              type: "uint8",
+              internalType: "enum Contractly.AgreementStatus",
+            },
+            {
+              name: "requiresAllPartiesToSign",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "isStakingRequired",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "partyAddresses",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "lockAgreement",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "signAgreementWithStakeDetails",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "stakeAgreement",
+          inputs: [
+            {
+              name: "_agreementId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
           stateMutability: "payable",
         },
         {
-          type: "function",
-          name: "deliveries",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "agreementId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "merchant",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "customer",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "orderReference",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "promisedDeliveryTime",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "guaranteeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "isDelivered",
-              type: "bool",
-              internalType: "bool",
-            },
-            {
-              name: "actualDeliveryTime",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "owner",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
           type: "event",
-          name: "CompensationPaid",
+          name: "AgreementCreated",
           inputs: [
             {
               name: "agreementId",
               type: "uint256",
-              indexed: false,
+              indexed: true,
               internalType: "uint256",
             },
             {
-              name: "customer",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "DeliveryConfirmed",
-          inputs: [
-            {
-              name: "agreementId",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "deliveryTime",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "wasOnTime",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "TimeGuaranteeCreated",
-          inputs: [
-            {
-              name: "agreementId",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "merchant",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-            {
-              name: "customer",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-            {
-              name: "orderReference",
+              name: "title",
               type: "string",
               indexed: false,
               internalType: "string",
+            },
+            {
+              name: "creator",
+              type: "address",
+              indexed: false,
+              internalType: "address",
             },
           ],
           anonymous: false,
         },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1740568542.json",
+      deploymentFile: "run-1740746371.json",
       deploymentScript: "Deploy.s.sol",
     },
   },

@@ -1,5 +1,102 @@
 # 🏗 Scaffold-ETH 2
 
+<think>
+Let me try to create a few different Mermaid diagrams that might render better. I'll focus on making them simple with fewer elements and clearer connections.
+
+I'll try:
+1. A simple flowchart showing the main contract interactions
+2. A sequence diagram showing the interaction flow
+3. A class diagram showing the relationship between contracts
+
+I'll make sure the syntax is correct and the diagrams aren't too complex, which should help with rendering.
+</think>
+
+# Contract Interaction Diagrams (Mermaid)
+
+## 1. Basic Contract Flow
+
+```mermaid
+graph TD
+    User([User]) --> Agreement([Agreement Contract])
+    Agreement --> Contractly([Contractly Contract])
+    
+    User -->|createAgreement| Agreement
+    User -->|signAgreement| Agreement
+    User -->|stakeAgreement| Agreement
+    User -->|fulfillAgreement| Agreement
+    User -->|breachAgreement| Agreement
+    
+    Agreement -->|delegates all calls| Contractly
+```
+
+## 2. Function Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Agreement
+    participant Contractly
+    
+    User->>Agreement: createAgreement()
+    Agreement->>Contractly: createAgreement()
+    Contractly-->>Agreement: return agreementId
+    Agreement-->>User: return agreementId
+    
+    User->>Agreement: signAgreementWithStakeDetails()
+    Agreement->>Contractly: getParty()
+    Agreement->>Contractly: signAgreement()
+    
+    User->>Agreement: stakeAgreement()
+    Agreement->>Contractly: stakeAgreement()
+    Agreement->>Contractly: stakedFunds()
+    Note over Agreement,Contractly: If all parties staked
+    Agreement->>Contractly: lockAgreement()
+```
+
+## 3. Agreement State Flow
+
+```mermaid
+stateDiagram-v2
+    [*] --> Created: createAgreement
+    Created --> Signed: signAgreementWithStakeDetails
+    Signed --> Locked: stakeAgreement (all parties)
+    Locked --> Fulfilled: fulfillAgreement
+    Locked --> Breached: breachAgreement
+    Fulfilled --> [*]
+    Breached --> [*]
+```
+
+## 4. Class Diagram
+
+```mermaid
+classDiagram
+    class Agreement {
+        +createAgreement()
+        +signAgreementWithStakeDetails()
+        +stakeAgreement()
+        +fulfillAgreement()
+        +breachAgreement()
+        +getAgreementDetails()
+        -addParty()
+    }
+    
+    class Contractly {
+        +createAgreement()
+        +getParty()
+        +signAgreement()
+        +addParty()
+        +stakeAgreement()
+        +lockAgreement()
+        +fulfillAgreement()
+        +breachAgreement()
+        +getAgreement()
+        +stakedFunds()
+    }
+    
+    Agreement --> Contractly : Uses
+```
+
+
 <h4 align="center">
   <a href="https://docs.scaffoldeth.io">Documentation</a> |
   <a href="https://scaffoldeth.io">Website</a>

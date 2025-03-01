@@ -1,16 +1,5 @@
 # 🏗 Scaffold-ETH 2
 
-<think>
-Let me try to create a few different Mermaid diagrams that might render better. I'll focus on making them simple with fewer elements and clearer connections.
-
-I'll try:
-1. A simple flowchart showing the main contract interactions
-2. A sequence diagram showing the interaction flow
-3. A class diagram showing the relationship between contracts
-
-I'll make sure the syntax is correct and the diagrams aren't too complex, which should help with rendering.
-</think>
-
 # Contract Interaction Diagrams (Mermaid)
 
 ## 1. Basic Contract Flow

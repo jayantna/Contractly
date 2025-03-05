@@ -1,2 +1,6 @@
 # Ignore 31337 deployments
 31337.json
+# Sepolia deployments
+11155111.json
+# Monad testnet deployments
+10143.json

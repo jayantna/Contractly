@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "./DeployHelpers.s.sol";
 import { DeployContractly } from "./DeployContractly.s.sol";
-import { DeployAgreement } from "./DeployAgreement.s.sol";
+import { DeployDelivery } from "./DeployDelivery.s.sol";
 /**
  * @notice Main deployment script for all contracts
  * @dev Run this when you want to deploy multiple contracts at once
@@ -18,7 +18,7 @@ contract DeployScript is ScaffoldETHDeploy {
         // myContract.run();
         DeployContractly deployContractly = new DeployContractly();
         address contractlyAddress = address(deployContractly.run());
-        DeployAgreement deployAgreement = new DeployAgreement();
-        deployAgreement.run(contractlyAddress);
+        DeployDelivery deployDelivery = new DeployDelivery();
+        deployDelivery.run(contractlyAddress);
     }
 }

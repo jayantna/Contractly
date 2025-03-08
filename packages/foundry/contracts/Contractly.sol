@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
  * @title Contractly
  * @dev Framework for creating self-enforcing digital agreements
  */
+
 contract Contractly {
     // ======== Custom Errors ========
     error OnlyOwner();
@@ -42,6 +43,7 @@ contract Contractly {
     }
 
     struct Party {
+        bool requiresSignature;
         bool requiresStaking;
         uint256 stakeRatio; // Percentage of total stake amount (1-100)
         bool hasSigned; // Whether the party has signed the agreement
@@ -57,8 +59,6 @@ contract Contractly {
         uint256 disputeWindowDuration;
         uint256 totalStakingAmount;
         AgreementStatus status;
-        bool requiresAllPartiesToSign;
-        bool isStakingRequired;
         address[] partyAddresses;
     }
 
@@ -127,7 +127,7 @@ contract Contractly {
      * @param _expirationTime Timestamp when the agreement expires
      * @param _totalStakingAmount Total amount that needs to be staked across all parties
      */
-    function createAgreement(string memory _title, address _creator, uint256 _expirationTime, uint256 _totalStakingAmount, bool _isStakingRequired, bool _requiresAllPartiesToSign) external onlyAuthorizedContract returns (uint256) {
+    function createAgreement(string memory _title, address _creator, uint256 _expirationTime, uint256 _totalStakingAmount) external onlyAuthorizedContract returns (uint256) {
         if (_expirationTime <= block.timestamp) revert FutureExpirationRequired();
 
         uint256 agreementId = agreementCount;
@@ -140,8 +140,6 @@ contract Contractly {
         newAgreement.expirationTime = _expirationTime;
         newAgreement.status = AgreementStatus.Pending;
         newAgreement.totalStakingAmount = _totalStakingAmount;
-        newAgreement.isStakingRequired = _isStakingRequired;
-        newAgreement.requiresAllPartiesToSign = _requiresAllPartiesToSign;
 
         agreementCount++;
 
@@ -157,9 +155,10 @@ contract Contractly {
      * @param _requiresStaking Whether this party needs to stake funds
      * @param _stakeRatio Percentage of total stake this party needs to provide (1-100)
      */
-    function addParty(uint256 _agreementId, address _partyAddress, bool _requiresStaking, uint256 _stakeRatio) external agreementExists(_agreementId) onlyPendingStatus(_agreementId) onlyAuthorizedContract {
+    function addParty(uint256 _agreementId, address _partyAddress, bool _requiresSignature, bool _requiresStaking, uint256 _stakeRatio) external agreementExists(_agreementId) onlyPendingStatus(_agreementId) onlyAuthorizedContract {
         Agreement storage agreement = agreements[_agreementId];
 
+        _requiresStaking = _requiresSignature ? _requiresStaking : false;
         _stakeRatio = _requiresStaking ? _stakeRatio : 0;
 
         if (_stakeRatio > 100) revert StakeRatioTooHigh();
@@ -173,14 +172,14 @@ contract Contractly {
             }
         }
         if (totalRatio > 100) revert TotalStakeRatioExceeds100();
-        _addToAgreementParties(agreement, _partyAddress, _requiresStaking, _stakeRatio);
+        _addToAgreementParties(agreement, _partyAddress, _requiresSignature, _requiresStaking, _stakeRatio);
     }
 
     /**
      * @dev Allows a party to sign an agreement
      * @param _agreementId The ID of the agreement to sign
      */
-    function signAgreement(uint256 _agreementId, address _signer) external agreementExists(_agreementId) onlyPendingStatus(_agreementId) onlyAuthorizedContract{
+    function signAgreement(uint256 _agreementId, address _signer) external agreementExists(_agreementId) onlyPendingStatus(_agreementId) onlyAuthorizedContract {
         Agreement storage agreement = agreements[_agreementId];
         Party storage party = agreement.parties[_signer];
 
@@ -189,18 +188,14 @@ contract Contractly {
         party.hasSigned = true;
 
         emit AgreementSigned(_agreementId, _signer);
-
     }
-
 
     /**
      * @dev Allows a party to stake funds for an agreement
      * @param _agreementId The ID of the agreement
      */
-    function stakeAgreement(uint256 _agreementId, address _sender) external payable agreementExists(_agreementId) onlyPendingStatus(_agreementId) onlyAuthorizedContract{
+    function stakeAgreement(uint256 _agreementId, address _sender) external payable agreementExists(_agreementId) onlyPendingStatus(_agreementId) onlyAuthorizedContract {
         Agreement storage agreement = agreements[_agreementId];
-        if (!agreement.isStakingRequired) revert StakingNotRequired();
-
         Party storage party = agreement.parties[_sender];
         if (!party.requiresStaking) revert StakingNotRequired();
 
@@ -211,13 +206,12 @@ contract Contractly {
         stakedFunds[_agreementId][_sender] = msg.value;
 
         emit FundsStaked(_agreementId, _sender, msg.value);
-
     }
 
     function fulfillAgreement(uint256 _agreementId) external agreementExists(_agreementId) onlyAuthorizedContract {
         Agreement storage agreement = agreements[_agreementId];
         if (agreement.status != AgreementStatus.Locked) revert NotLockedStatus();
-        
+
         if (block.timestamp < agreement.expirationTime) {
             revert AgreementNotExpired();
         }
@@ -227,7 +221,7 @@ contract Contractly {
         // Return staked funds to all parties
         for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
             address party = agreement.partyAddresses[i];
-            uint256 amount = stakedFunds[_agreementId][party];
+            uint256 amount = getStakedAmount(_agreementId, party);
             if (amount > 0) {
                 stakedFunds[_agreementId][party] = 0;
                 (bool success,) = party.call{ value: amount }("");
@@ -235,7 +229,6 @@ contract Contractly {
                 emit FundsReleased(_agreementId, party, amount);
             }
         }
-
         emit AgreementFulfilled(_agreementId);
     }
 
@@ -250,36 +243,55 @@ contract Contractly {
         agreement.status = AgreementStatus.Breached;
 
         // Handle breach consequences - distribute the breaching party's funds
-        uint256 breachingPartyStake = stakedFunds[_agreementId][_breachingParty];
+        uint256 breachingPartyStake = getStakedAmount(_agreementId, _breachingParty);
+
         if (breachingPartyStake > 0) {
             stakedFunds[_agreementId][_breachingParty] = 0;
 
-            // Calculate total stake ratio of non-breaching parties
-            uint256 totalNonBreachingRatio = 0;
+            bool allPartiesRequireSignature = true;
             for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
-                address party = agreement.partyAddresses[i];
-                if (party != _breachingParty) {
-                    totalNonBreachingRatio += agreement.parties[party].stakeRatio;
+                if (!agreement.parties[agreement.partyAddresses[i]].requiresSignature) {
+                    allPartiesRequireSignature = false;
                 }
             }
-
-            // Create compensation array based on stake ratios
-            uint256[] memory compensations = new uint256[](agreement.partyAddresses.length);
-            for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
-                address party = agreement.partyAddresses[i];
-                if (party != _breachingParty && totalNonBreachingRatio > 0) {
-                    // Calculate compensation proportional to stake ratio
-                    compensations[i] = (breachingPartyStake * agreement.parties[party].stakeRatio) / totalNonBreachingRatio;
+            // If all parties require signatures, distribute the funds to the non-breaching parties in proportion to their stake ratio
+            if (allPartiesRequireSignature) {
+                // Calculate total stake ratio of non-breaching parties
+                uint256 totalNonBreachingRatio = 0;
+                for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
+                    address party = agreement.partyAddresses[i];
+                    if (party != _breachingParty) {
+                        totalNonBreachingRatio += agreement.parties[party].stakeRatio;
+                    }
                 }
-            }
 
-            // Distribute compensation according to calculated amounts
-            for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
-                address party = agreement.partyAddresses[i];
-                if (party != _breachingParty && compensations[i] > 0) {
-                    (bool success,) = party.call{ value: compensations[i] }("");
-                    if (!success) revert FundsDistributionFailed();
-                    emit FundsReleased(_agreementId, party, compensations[i]);
+                // Create compensation array based on stake ratios
+                uint256[] memory compensations = new uint256[](agreement.partyAddresses.length);
+                for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
+                    address party = agreement.partyAddresses[i];
+                    if (party != _breachingParty && totalNonBreachingRatio > 0) {
+                        // Calculate compensation proportional to stake ratio
+                        compensations[i] = (breachingPartyStake * agreement.parties[party].stakeRatio) / totalNonBreachingRatio;
+                    }
+                }
+
+                // Distribute compensation according to calculated amounts
+                for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
+                    address party = agreement.partyAddresses[i];
+                    if (party != _breachingParty && compensations[i] > 0) {
+                        (bool success,) = party.call{ value: compensations[i] }("");
+                        if (!success) revert FundsDistributionFailed();
+                    }
+                }
+            } else {
+                // If all parties does not require signature, distribute the funds to non-breaching parties equally
+                uint256 amountPerParty = breachingPartyStake / (agreement.partyAddresses.length - 1);
+                for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
+                    address party = agreement.partyAddresses[i];
+                    if (party != _breachingParty) {
+                        (bool success,) = party.call{ value: amountPerParty }("");
+                        if (!success) revert FundsDistributionFailed();
+                    }
                 }
             }
         }
@@ -288,7 +300,7 @@ contract Contractly {
         for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
             address party = agreement.partyAddresses[i];
             if (party != _breachingParty) {
-                uint256 amount = stakedFunds[_agreementId][party];
+                uint256 amount = getStakedAmount(_agreementId, party);
                 if (amount > 0) {
                     stakedFunds[_agreementId][party] = 0;
                     (bool success,) = party.call{ value: amount }("");
@@ -315,10 +327,7 @@ contract Contractly {
      */
     function lockAgreement(uint256 _agreementId) external agreementExists(_agreementId) onlyPendingStatus(_agreementId) onlyAuthorizedContract {
         if (!_checkAllConditionsMet(_agreementId)) revert ConditionsNotMet();
-
-        // Set status to Locked
         agreements[_agreementId].status = AgreementStatus.Locked;
-
         emit AgreementLocked(_agreementId);
     }
 
@@ -333,30 +342,26 @@ contract Contractly {
         Agreement storage agreement = agreements[_agreementId];
 
         // Check if all required parties have signed
-        if (agreement.requiresAllPartiesToSign) {
-            for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
-                if (!agreement.parties[agreement.partyAddresses[i]].hasSigned) {
-                    return false;
-                }
+        for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
+            if (agreement.parties[agreement.partyAddresses[i]].requiresSignature && !agreement.parties[agreement.partyAddresses[i]].hasSigned) {
+                return false;
             }
         }
 
         // Check if all required staking is completed
-        if (agreement.isStakingRequired) {
-            for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
-                address partyAddress = agreement.partyAddresses[i];
-                Party storage party = agreement.parties[partyAddress];
-                if (party.requiresStaking) {
-                    uint256 requiredStake = _getRequiredStakeAmount(_agreementId, partyAddress);
-                    if (stakedFunds[_agreementId][partyAddress] < requiredStake) {
-                        return false;
-                    }
+        for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
+            address partyAddress = agreement.partyAddresses[i];
+            Party storage party = agreement.parties[partyAddress];
+            if (party.requiresStaking) {
+                uint256 requiredStake = _getRequiredStakeAmount(_agreementId, partyAddress);
+                if (stakedFunds[_agreementId][partyAddress] < requiredStake) {
+                    return false;
                 }
             }
         }
         return true;
     }
-    
+
     /**
      * @dev Calculates the required stake amount for a party based on their stake ratio
      * @param _agreementId The ID of the agreement
@@ -372,17 +377,8 @@ contract Contractly {
         return (agreement.totalStakingAmount * party.stakeRatio) / 100;
     }
 
-    function _addToAgreementParties(
-        Agreement storage _agreement,
-        address _partyAddress,
-        bool _requiresStaking,
-        uint256 _stakeRatio
-    ) internal {
-        _agreement.parties[_partyAddress] = Party({
-            requiresStaking: _requiresStaking,
-            stakeRatio: _stakeRatio,
-            hasSigned: false
-        });
+    function _addToAgreementParties(Agreement storage _agreement, address _partyAddress, bool _requiresSignature, bool _requiresStaking, uint256 _stakeRatio) internal {
+        _agreement.parties[_partyAddress] = Party({ requiresSignature: _requiresSignature, requiresStaking: _requiresStaking, stakeRatio: _stakeRatio, hasSigned: false });
         _agreement.partyAddresses.push(_partyAddress);
     }
 
@@ -396,14 +392,14 @@ contract Contractly {
         return stakedFunds[_agreementId][_party];
     }
 
-    function getAgreement(uint256 _agreementId) public view agreementExists(_agreementId) returns (uint256 id, string memory title, address creator, uint256 creationTime, uint256 expirationTime, uint256 disputeWindowDuration, uint256 totalStakingAmount, AgreementStatus status, bool requiresAllPartiesToSign, bool isStakingRequired, address[] memory partyAddresses) {
+    function getAgreement(uint256 _agreementId) public view agreementExists(_agreementId) returns (uint256 id, string memory title, address creator, uint256 creationTime, uint256 expirationTime, uint256 disputeWindowDuration, uint256 totalStakingAmount, AgreementStatus status, address[] memory partyAddresses) {
         Agreement storage agreement = agreements[_agreementId];
-        return (agreement.id, agreement.title, agreement.creator, agreement.creationTime, agreement.expirationTime, agreement.disputeWindowDuration, agreement.totalStakingAmount, agreement.status, agreement.requiresAllPartiesToSign, agreement.isStakingRequired, agreement.partyAddresses);
+        return (agreement.id, agreement.title, agreement.creator, agreement.creationTime, agreement.expirationTime, agreement.disputeWindowDuration, agreement.totalStakingAmount, agreement.status, agreement.partyAddresses);
     }
 
     function getParty(uint256 _agreementId, address _partyAddress) public view agreementExists(_agreementId) returns (bool requiresStaking, uint256 stakeRatio, bool hasSigned) {
         Agreement storage agreement = agreements[_agreementId];
-        
+
         // Check if the party exists in partyAddresses array
         bool partyExists = false;
         for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
@@ -412,7 +408,7 @@ contract Contractly {
                 break;
             }
         }
-        
+
         if (!partyExists) {
             revert PartyNotFound();
         }
@@ -435,5 +431,21 @@ contract Contractly {
 
     function isAuthorizedContract(address _contractAddress) public view returns (bool) {
         return authorizedContracts[_contractAddress];
+    }
+
+    function getPartyHasSigned(uint256 _agreementId, address _partyAddress) public view agreementExists(_agreementId) returns (bool) {
+        return agreements[_agreementId].parties[_partyAddress].hasSigned;
+    }
+
+    function getPartyRequiresStaking(uint256 _agreementId, address _partyAddress) public view agreementExists(_agreementId) returns (bool) {
+        return agreements[_agreementId].parties[_partyAddress].requiresStaking;
+    }
+
+    function getPartyStakeRatio(uint256 _agreementId, address _partyAddress) public view agreementExists(_agreementId) returns (uint256) {
+        return agreements[_agreementId].parties[_partyAddress].stakeRatio;
+    }
+
+    function getPartyStakeAmount(uint256 _agreementId, address _partyAddress) public view agreementExists(_agreementId) returns (uint256) {
+        return stakedFunds[_agreementId][_partyAddress];
     }
 }

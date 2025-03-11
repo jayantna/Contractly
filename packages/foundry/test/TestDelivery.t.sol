@@ -32,7 +32,7 @@ contract TestDelivery is Test {
 
     function testCreateDelivery() public fundAllUsers {
         vm.prank(VENDOR);
-        uint256 deliveryId = delivery.createDelivery{ value: 1 ether }("Test Delivery", block.timestamp + 1 days, 1 ether, ALICE);
+        uint256 deliveryId = delivery.createDelivery{ value: 1 ether }(block.timestamp + 1 days, 1 ether, ALICE);
         assertEq(deliveryId, 0);
         assertEq(delivery.getHasVendorAssigned(deliveryId), true);
         assertEq(contractly.getPartyCount(deliveryId), 2);
@@ -54,9 +54,6 @@ contract TestDelivery is Test {
     }
 
     function testBatchCreateDelivery() public fundAllUsers {
-        string[] memory titles = new string[](2);
-        titles[0] = "Test Delivery 1";
-        titles[1] = "Test Delivery 2";
         uint256[] memory expirationTimes = new uint256[](2);
         expirationTimes[0] = block.timestamp + 1 days;
         expirationTimes[1] = block.timestamp + 2 days;
@@ -68,7 +65,7 @@ contract TestDelivery is Test {
         totalStakingAmounts[1] = 1 ether;
 
         vm.prank(VENDOR);
-        uint256[] memory deliveryIds = delivery.batchCreateDelivery{ value: 3 ether }(titles, expirationTimes, totalStakingAmounts, customerAddresses);
+        uint256[] memory deliveryIds = delivery.batchCreateDelivery{ value: 3 ether }(expirationTimes, totalStakingAmounts, customerAddresses);
         for (uint256 i = 0; i < deliveryIds.length; i++) {
             assertEq(deliveryIds[i], i); // deliveryIds should be the index of the delivery in sequential order
             assertEq(delivery.getHasVendorAssigned(deliveryIds[i]), true); // vendor should be assigned to the all deliveries
@@ -107,7 +104,7 @@ contract TestDelivery is Test {
         totalStakingAmounts[1] = 1 ether;
 
         vm.prank(VENDOR);
-        uint256[] memory deliveryIds = delivery.batchCreateDelivery{ value: 3 ether }(titles, expirationTimes, totalStakingAmounts, customerAddresses);
+        uint256[] memory deliveryIds = delivery.batchCreateDelivery{ value: 3 ether }(expirationTimes, totalStakingAmounts, customerAddresses);
         _;
     }
 

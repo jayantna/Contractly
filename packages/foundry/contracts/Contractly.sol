@@ -45,13 +45,12 @@ contract Contractly {
     struct Party {
         bool requiresSignature;
         bool requiresStaking;
-        uint256 stakeRatio; // Percentage of total stake amount (1-100)
+        uint8 stakeRatio; // Percentage of total stake amount (1-100)
         bool hasSigned; // Whether the party has signed the agreement
     }
 
     struct Agreement {
         uint256 id;
-        string title;
         address creator;
         mapping(address => Party) parties;
         uint256 creationTime;
@@ -60,6 +59,7 @@ contract Contractly {
         uint256 totalStakingAmount;
         AgreementStatus status;
         address[] partyAddresses;
+        mapping(address => bool) isParty;
     }
 
     // Mapping from agreement ID to Agreement
@@ -69,7 +69,7 @@ contract Contractly {
     mapping(uint256 => mapping(address => uint256)) public stakedFunds;
 
     // ======== Events ========
-    event AgreementCreated(uint256 agreementId, address creator, string title);
+    event AgreementCreated(uint256 agreementId, address creator);
     event AgreementSigned(uint256 agreementId, address party);
     event AgreementLocked(uint256 agreementId);
     event AgreementActivated(uint256 agreementId);
@@ -96,15 +96,7 @@ contract Contractly {
     }
 
     modifier onlyParty(uint256 _agreementId) {
-        bool isParty = false;
-        Agreement storage agreement = agreements[_agreementId];
-        for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
-            if (agreement.partyAddresses[i] == msg.sender) {
-                isParty = true;
-                break;
-            }
-        }
-        if (!isParty) revert NotAgreementParty();
+        if (!agreements[_agreementId].isParty[msg.sender]) revert NotAgreementParty();
         _;
     }
 
@@ -122,19 +114,17 @@ contract Contractly {
 
     /**
      * @dev Creates a new agreement - can only be called by authorized contracts
-     * @param _title Title of the agreement
      * @param _creator Creator of the agreement
      * @param _expirationTime Timestamp when the agreement expires
      * @param _totalStakingAmount Total amount that needs to be staked across all parties
      */
-    function createAgreement(string memory _title, address _creator, uint256 _expirationTime, uint256 _totalStakingAmount) external onlyAuthorizedContract returns (uint256) {
+    function createAgreement(address _creator, uint256 _expirationTime, uint256 _totalStakingAmount) external onlyAuthorizedContract returns (uint256) {
         if (_expirationTime <= block.timestamp) revert FutureExpirationRequired();
 
         uint256 agreementId = agreementCount;
         Agreement storage newAgreement = agreements[agreementId];
 
         newAgreement.id = agreementId;
-        newAgreement.title = _title;
         newAgreement.creator = _creator;
         newAgreement.creationTime = block.timestamp;
         newAgreement.expirationTime = _expirationTime;
@@ -143,7 +133,7 @@ contract Contractly {
 
         agreementCount++;
 
-        emit AgreementCreated(agreementId, msg.sender, _title);
+        emit AgreementCreated(agreementId, msg.sender);
 
         return agreementId;
     }
@@ -155,7 +145,7 @@ contract Contractly {
      * @param _requiresStaking Whether this party needs to stake funds
      * @param _stakeRatio Percentage of total stake this party needs to provide (1-100)
      */
-    function addParty(uint256 _agreementId, address _partyAddress, bool _requiresSignature, bool _requiresStaking, uint256 _stakeRatio) external agreementExists(_agreementId) onlyPendingStatus(_agreementId) onlyAuthorizedContract {
+    function addParty(uint256 _agreementId, address _partyAddress, bool _requiresSignature, bool _requiresStaking, uint8 _stakeRatio) external agreementExists(_agreementId) onlyPendingStatus(_agreementId) onlyAuthorizedContract {
         Agreement storage agreement = agreements[_agreementId];
 
         _requiresStaking = _requiresSignature ? _requiresStaking : false;
@@ -219,15 +209,19 @@ contract Contractly {
         agreement.status = AgreementStatus.Fulfilled;
 
         // Return staked funds to all parties
-        for (uint256 i = 0; i < agreement.partyAddresses.length; i++) {
-            address party = agreement.partyAddresses[i];
-            uint256 amount = getStakedAmount(_agreementId, party);
+        address[] memory parties = agreement.partyAddresses;
+        uint256 partyCount = parties.length;
+        
+        for (uint256 i = 0; i < partyCount;) {
+            address party = parties[i];
+            uint256 amount = stakedFunds[_agreementId][party];
             if (amount > 0) {
                 stakedFunds[_agreementId][party] = 0;
                 (bool success,) = party.call{ value: amount }("");
                 if (!success) revert FundsTransferFailed();
                 emit FundsReleased(_agreementId, party, amount);
             }
+            unchecked { ++i; }
         }
         emit AgreementFulfilled(_agreementId);
     }
@@ -377,7 +371,7 @@ contract Contractly {
         return (agreement.totalStakingAmount * party.stakeRatio) / 100;
     }
 
-    function _addToAgreementParties(Agreement storage _agreement, address _partyAddress, bool _requiresSignature, bool _requiresStaking, uint256 _stakeRatio) internal {
+    function _addToAgreementParties(Agreement storage _agreement, address _partyAddress, bool _requiresSignature, bool _requiresStaking, uint8 _stakeRatio) internal {
         _agreement.parties[_partyAddress] = Party({ requiresSignature: _requiresSignature, requiresStaking: _requiresStaking, stakeRatio: _stakeRatio, hasSigned: false });
         _agreement.partyAddresses.push(_partyAddress);
     }
@@ -392,9 +386,9 @@ contract Contractly {
         return stakedFunds[_agreementId][_party];
     }
 
-    function getAgreement(uint256 _agreementId) public view agreementExists(_agreementId) returns (uint256 id, string memory title, address creator, uint256 creationTime, uint256 expirationTime, uint256 disputeWindowDuration, uint256 totalStakingAmount, AgreementStatus status, address[] memory partyAddresses) {
+    function getAgreement(uint256 _agreementId) public view agreementExists(_agreementId) returns (uint256 id, address creator, uint256 creationTime, uint256 expirationTime, uint256 disputeWindowDuration, uint256 totalStakingAmount, AgreementStatus status, address[] memory partyAddresses) {
         Agreement storage agreement = agreements[_agreementId];
-        return (agreement.id, agreement.title, agreement.creator, agreement.creationTime, agreement.expirationTime, agreement.disputeWindowDuration, agreement.totalStakingAmount, agreement.status, agreement.partyAddresses);
+        return (agreement.id, agreement.creator, agreement.creationTime, agreement.expirationTime, agreement.disputeWindowDuration, agreement.totalStakingAmount, agreement.status, agreement.partyAddresses);
     }
 
     function getParty(uint256 _agreementId, address _partyAddress) public view agreementExists(_agreementId) returns (bool requiresStaking, uint256 stakeRatio, bool hasSigned) {

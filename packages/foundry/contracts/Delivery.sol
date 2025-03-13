@@ -2,27 +2,30 @@
 pragma solidity ^0.8.24;
 
 import "./Contractly.sol";
-import "forge-std/console.sol";
 
 contract Delivery {
     // ======== Errors ========
     error Delivery__VendorAlreadyAssigned();
     error Delivery__VendorNotSigned();
+    error Delivery__InsufficientStakeAmount();
 
     // ======== State Variables ========
-    Contractly public contractly;
+    Contractly public immutable contractly;
     uint256 private lastAutomationUpdate;
-    mapping(uint256 agreementId => bool hasVendorAssigned) private hasVendorAssigned;
+    mapping(uint256 => bool) private hasVendorAssigned;
+    address private immutable owner;
+    mapping(uint256 => uint256) private awbToAgreementId;
 
     // ======== Events ========
     event AgreementCreated(uint256 indexed agreementId, address creator);
     event DeliveryCreated(uint256 indexed agreementId, address vendor, address customer);
-    event BatchDeliveryCreated(uint256[] expirationTimes, uint256[] totalStakingAmounts, address[] customerAddresses);
+    event BatchDeliveryCreated(uint128[] expirationTimes, uint256[] totalStakingAmounts, address[] customerAddresses);
 
     // ======== Constructor ========
     constructor(address _contractlyAddress) {
         contractly = Contractly(_contractlyAddress);
         lastAutomationUpdate = 0;
+        owner = msg.sender;
     }
 
     // ======== Core Functions ========
@@ -33,14 +36,26 @@ contract Delivery {
      * @param _totalStakingAmount The total amount that needs to be staked across all parties
      * @param _customerAddress The address of the customer
      */
-    function createDelivery(uint256 _expirationTime, uint256 _totalStakingAmount, address _customerAddress) public payable returns (uint256) {
-        uint256 agreementId = _createAgreement(_expirationTime, _totalStakingAmount);
-        _addVendorParty(agreementId, msg.sender);
-        _addCustomerParty(agreementId, _customerAddress);
-        _signAgreement(agreementId);
-        stakeAgreement(agreementId, _totalStakingAmount);
+    function createDelivery(uint128 _expirationTime, uint256 _totalStakingAmount, address _customerAddress, uint256 _awbNumber) public payable returns (uint256) {
+        address sender = msg.sender;
+        uint256 agreementId = contractly.createAgreement(sender, _expirationTime, _totalStakingAmount);
+        
+        if (hasVendorAssigned[agreementId]) {
+            revert Delivery__VendorAlreadyAssigned();
+        }
+        
+        contractly.addParty(agreementId, sender, true, true, 100);
+        hasVendorAssigned[agreementId] = true;
+        
+        contractly.addParty(agreementId, _customerAddress, false, false, 0);
+        
+        contractly.signAgreement(agreementId, sender);
+        contractly.stakeAgreement{ value: msg.value }(agreementId, sender);
         contractly.lockAgreement(agreementId);
-        emit DeliveryCreated(agreementId, msg.sender, _customerAddress);
+
+        awbToAgreementId[_awbNumber] = agreementId;
+        
+        emit DeliveryCreated(agreementId, sender, _customerAddress);
         return agreementId;
     }
 
@@ -50,17 +65,34 @@ contract Delivery {
      * @param _totalStakingAmounts The total amounts that need to be staked across all parties
      * @param _customerAddresses The addresses of the customers
      */
-    function batchCreateDelivery(uint256[] memory _expirationTimes, uint256[] memory _totalStakingAmounts, address[] memory _customerAddresses) public payable returns (uint256[] memory) {
-        uint256[] memory agreementIds = new uint256[](_customerAddresses.length);
-        for (uint256 i = 0; i < _customerAddresses.length; i++) {
-            uint256 agreementId = _createAgreement(_expirationTimes[i], _totalStakingAmounts[i]);
-            _addVendorParty(agreementId, msg.sender);
-            _addCustomerParty(agreementId, _customerAddresses[i]);
-            _signAgreement(agreementId);
-            stakeAgreement(agreementId, _totalStakingAmounts[i]);
-            contractly.lockAgreement(agreementId);
-            agreementIds[i] = agreementId;
+    function batchCreateDelivery(uint128[] calldata _expirationTimes, uint256[] calldata _totalStakingAmounts, address[] calldata _customerAddresses) public payable returns (uint256[] memory) {
+        uint256 length = _customerAddresses.length;
+        address sender = msg.sender;
+        uint256[] memory agreementIds = new uint256[](length);
+        
+        uint256 totalRequiredStake = 0;
+        for (uint256 i = 0; i < length;) {
+            totalRequiredStake += _totalStakingAmounts[i];
+            unchecked { ++i; }
         }
+        if (msg.value < totalRequiredStake) revert Delivery__InsufficientStakeAmount();
+
+        for (uint256 i = 0; i < length;) {
+            uint256 agreementId = contractly.createAgreement(sender, _expirationTimes[i], _totalStakingAmounts[i]);
+            
+            contractly.addParty(agreementId, sender, true, true, 100);
+            hasVendorAssigned[agreementId] = true;
+            
+            contractly.addParty(agreementId, _customerAddresses[i], false, false, 0);
+            
+            contractly.signAgreement(agreementId, sender);
+            contractly.stakeAgreement{ value: _totalStakingAmounts[i] }(agreementId, sender);
+            contractly.lockAgreement(agreementId);
+            
+            agreementIds[i] = agreementId;
+            unchecked { ++i; }
+        }
+        
         emit BatchDeliveryCreated(_expirationTimes, _totalStakingAmounts, _customerAddresses);
         return agreementIds;
     }
@@ -69,16 +101,23 @@ contract Delivery {
         if (!contractly.getPartyHasSigned(_agreementId, msg.sender)) {
             revert Delivery__VendorNotSigned();
         }
-        contractly.stakeAgreement{ value: _amount }(_agreementId, msg.sender);
-        // Check if all parties have staked to automatically lock the agreement
+        
+        // Get parties before making external call to stake
         (,,,,,,, address[] memory parties) = getAgreementDetails(_agreementId);
+        
+        contractly.stakeAgreement{ value: _amount }(_agreementId, msg.sender);
+        
+        // Check if all parties have staked to automatically lock the agreement
         bool allPartiesStaked = true;
-        for (uint256 i = 0; i < parties.length; i++) {
-            if (contractly.stakedFunds(_agreementId, parties[i]) == 0) {
+        for (uint256 i = 0; i < parties.length;) {
+            if (contractly.getPartyStakeAmount(_agreementId, parties[i]) == 0 && 
+                contractly.getPartyRequiresStaking(_agreementId, parties[i])) {
                 allPartiesStaked = false;
                 break;
             }
+            unchecked { ++i; }
         }
+        
         if (allPartiesStaked) {
             contractly.lockAgreement(_agreementId);
         }
@@ -93,40 +132,13 @@ contract Delivery {
     }
 
     function checkDeliveryStatus(uint256 _agreementId) public {
-       if(true){
-        fulfillAgreement(_agreementId);
-       }
-       else{
-        breachAgreement(_agreementId, msg.sender);
-       }
-       lastAutomationUpdate = block.timestamp;
-    }
-
-    // ======== Internal Functions ========
-
-    function _createAgreement(uint256 _expirationTime, uint256 _totalStakingAmount) internal returns (uint256) {
-        // Create the agreement in Contractly
-        uint256 agreementId = contractly.createAgreement(msg.sender, _expirationTime, _totalStakingAmount);
-
-        emit AgreementCreated(agreementId, msg.sender);
-
-        return agreementId;
-    }
-
-    function _addVendorParty(uint256 _agreementId, address _partyAddress) internal {
-        if (hasVendorAssigned[_agreementId]) {
-            revert Delivery__VendorAlreadyAssigned();
+        (,,,uint256 expirationTime,,,Contractly.AgreementStatus status,) = getAgreementDetails(_agreementId);
+        
+        if(block.timestamp >= expirationTime && status == Contractly.AgreementStatus.Locked) {
+            fulfillAgreement(_agreementId);
         }
-        contractly.addParty(_agreementId, _partyAddress, true, true, 100);
-        hasVendorAssigned[_agreementId] = true;
-    }
-
-    function _addCustomerParty(uint256 _agreementId, address _partyAddress) internal {
-        contractly.addParty(_agreementId, _partyAddress, false, false, 0);
-    }
-
-    function _signAgreement(uint256 _agreementId) internal {
-        contractly.signAgreement(_agreementId, msg.sender);
+        
+        lastAutomationUpdate = block.timestamp;
     }
 
     // ======== Getters ========
@@ -141,5 +153,9 @@ contract Delivery {
 
     function getLastAutomationUpdate() public view returns (uint256) {
         return lastAutomationUpdate;
+    }
+
+    function getAwbToAgreementId(uint256 _awbNumber) public view returns (uint256){
+        return awbToAgreementId[_awbNumber];
     }
 }

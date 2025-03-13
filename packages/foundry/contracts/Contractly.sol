@@ -53,9 +53,9 @@ contract Contractly {
         uint256 id;
         address creator;
         mapping(address => Party) parties;
-        uint256 creationTime;
-        uint256 expirationTime;
-        uint256 disputeWindowDuration;
+        uint128 creationTime;
+        uint128 expirationTime;
+        uint128 disputeWindowDuration;
         uint256 totalStakingAmount;
         AgreementStatus status;
         address[] partyAddresses;
@@ -118,7 +118,7 @@ contract Contractly {
      * @param _expirationTime Timestamp when the agreement expires
      * @param _totalStakingAmount Total amount that needs to be staked across all parties
      */
-    function createAgreement(address _creator, uint256 _expirationTime, uint256 _totalStakingAmount) external onlyAuthorizedContract returns (uint256) {
+    function createAgreement(address _creator, uint128 _expirationTime, uint256 _totalStakingAmount) external onlyAuthorizedContract returns (uint256) {
         if (_expirationTime <= block.timestamp) revert FutureExpirationRequired();
 
         uint256 agreementId = agreementCount;
@@ -126,7 +126,7 @@ contract Contractly {
 
         newAgreement.id = agreementId;
         newAgreement.creator = _creator;
-        newAgreement.creationTime = block.timestamp;
+        newAgreement.creationTime = uint128(block.timestamp);
         newAgreement.expirationTime = _expirationTime;
         newAgreement.status = AgreementStatus.Pending;
         newAgreement.totalStakingAmount = _totalStakingAmount;
@@ -201,10 +201,6 @@ contract Contractly {
     function fulfillAgreement(uint256 _agreementId) external agreementExists(_agreementId) onlyAuthorizedContract {
         Agreement storage agreement = agreements[_agreementId];
         if (agreement.status != AgreementStatus.Locked) revert NotLockedStatus();
-
-        if (block.timestamp < agreement.expirationTime) {
-            revert AgreementNotExpired();
-        }
 
         agreement.status = AgreementStatus.Fulfilled;
 
@@ -386,7 +382,7 @@ contract Contractly {
         return stakedFunds[_agreementId][_party];
     }
 
-    function getAgreement(uint256 _agreementId) public view agreementExists(_agreementId) returns (uint256 id, address creator, uint256 creationTime, uint256 expirationTime, uint256 disputeWindowDuration, uint256 totalStakingAmount, AgreementStatus status, address[] memory partyAddresses) {
+    function getAgreement(uint256 _agreementId) public view agreementExists(_agreementId) returns (uint256 id, address creator, uint128 creationTime, uint128 expirationTime, uint128 disputeWindowDuration, uint256 totalStakingAmount, AgreementStatus status, address[] memory partyAddresses) {
         Agreement storage agreement = agreements[_agreementId];
         return (agreement.id, agreement.creator, agreement.creationTime, agreement.expirationTime, agreement.disputeWindowDuration, agreement.totalStakingAmount, agreement.status, agreement.partyAddresses);
     }

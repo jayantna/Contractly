@@ -32,7 +32,7 @@ contract TestDelivery is Test {
 
     function testCreateDelivery() public fundAllUsers {
         vm.prank(VENDOR);
-        uint256 deliveryId = delivery.createDelivery{ value: 1 ether }(block.timestamp + 1 days, 1 ether, ALICE);
+        uint256 deliveryId = delivery.createDelivery{ value: 1 ether }(uint128(block.timestamp + 1 days), 1 ether, ALICE, 123);
         assertEq(deliveryId, 0);
         assertEq(delivery.getHasVendorAssigned(deliveryId), true);
         assertEq(contractly.getPartyCount(deliveryId), 2);
@@ -54,9 +54,9 @@ contract TestDelivery is Test {
     }
 
     function testBatchCreateDelivery() public fundAllUsers {
-        uint256[] memory expirationTimes = new uint256[](2);
-        expirationTimes[0] = block.timestamp + 1 days;
-        expirationTimes[1] = block.timestamp + 2 days;
+        uint128[] memory expirationTimes = new uint128[](2);
+        expirationTimes[0] = uint128(block.timestamp + 1 days);
+        expirationTimes[1] = uint128(block.timestamp + 2 days);
         address[] memory customerAddresses = new address[](2);
         customerAddresses[0] = ALICE;
         customerAddresses[1] = BOB;
@@ -93,9 +93,9 @@ contract TestDelivery is Test {
         string[] memory titles = new string[](2);
         titles[0] = "Test Delivery 1";
         titles[1] = "Test Delivery 2";
-        uint256[] memory expirationTimes = new uint256[](2);
-        expirationTimes[0] = block.timestamp + 1 days;
-        expirationTimes[1] = block.timestamp + 2 days;
+        uint128[] memory expirationTimes = new uint128[](2);
+        expirationTimes[0] = uint128(block.timestamp + 1 days);
+        expirationTimes[1] = uint128(block.timestamp + 2 days);
         address[] memory customerAddresses = new address[](2);
         customerAddresses[0] = ALICE;
         customerAddresses[1] = BOB;
@@ -124,5 +124,9 @@ contract TestDelivery is Test {
         assertEq(ALICE.balance, 12 ether);
         assertEq(BOB.balance, 11 ether);
         assertEq(VENDOR.balance, 1000 ether - 3 ether);
+    }
+
+    function testGetAgreement() public fundAllUsers createBatchDelivery(){
+        (,,,,,,, address[] memory parties) = delivery.getAgreementDetails(0);
     }
 }

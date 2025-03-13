@@ -64,4 +64,4 @@ verify:
 	forge script script/VerifyAll.s.sol --ffi --rpc-url $(RPC_URL)
 
 verify-sourcify:
-	forge verify-contract 0xb6fc60Ab923043D90907724c58B2BAf009586247 Delivery --chain 10143 --verifier sourcify --verifier-url https://sourcify-api-monad.blockvision.org   
+	forge verify-contract 0xbDF351d76823A8714EE78e94abd4ff19Bbe5bcD8 Contractly --chain 10143 --verifier sourcify --verifier-url https://sourcify-api-monad.blockvision.org   

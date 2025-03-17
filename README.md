@@ -1,171 +1,87 @@
-# 🏗 Scaffold-ETH 2
-Code Flow:  https://github.com/jayantna/Contractly/blob/main/packages/foundry/test/TestAgreement.t.sol
+# Contractly
 
-Contractly: https://sepolia.etherscan.io/address/0xf76c12d8f8e18e6c2276b143887b82254f585088
+**Contractly** is the next evolution of digital contract platforms, enabling **self-enforcing contracts** that go beyond mere acceptance of terms. Built on smart contract technology, Contractly automates the enforcement of agreements, ensuring accountability and trust between parties without the need for manual intervention.
 
-Agreement: https://sepolia.etherscan.io/address/0x8ceb2ad172cdd8b0d932904e657c456382ba0aee
+## Project Description & Problem Statement
 
-# Contract Interaction Diagrams (Mermaid)
+D2C brands face a critical challenge:  
+Consumers often avoid purchasing directly from brands due to concerns about recourse if something goes wrong. This lack of trust forces brands to rely on third-party marketplaces, sacrificing margins and losing direct customer relationships.  
 
-## 1. Basic Contract Flow
+**Contractly solves this problem** by creating a trustless system where delivery commitments are automatically enforced through smart contracts. This builds consumer confidence, enabling brands to capture greater margins and foster valuable first-party relationships.  
 
-```mermaid
-graph TD
-    User([User]) --> Agreement([Agreement Contract])
-    Agreement --> Contractly([Contractly Contract])
-    
-    User -->|createAgreement| Agreement
-    User -->|signAgreement| Agreement
-    User -->|stakeAgreement| Agreement
-    User -->|fulfillAgreement| Agreement
-    User -->|breachAgreement| Agreement
-    
-    Agreement -->|delegates all calls| Contractly
-```
+In its **v1 release**, Contractly focuses on **delivery guarantees for Direct-to-Consumer (D2C) brands**. Brands can stake funds against their delivery promises, and if deadlines are missed, customers are automatically compensated without the need for claims or disputes. By combining familiar digital contract signing with smart contract capabilities, Contractly provides an intuitive, business-friendly interface for creating trustless agreements.
 
-## 2. Function Sequence Diagram
+## Features
 
-```mermaid
-sequenceDiagram
-    actor User
-    participant Agreement
-    participant Contractly
-    
-    User->>Agreement: createAgreement()
-    Agreement->>Contractly: createAgreement()
-    Contractly-->>Agreement: return agreementId
-    Agreement-->>User: return agreementId
-    
-    User->>Agreement: signAgreementWithStakeDetails()
-    Agreement->>Contractly: getParty()
-    Agreement->>Contractly: signAgreement()
-    
-    User->>Agreement: stakeAgreement()
-    Agreement->>Contractly: stakeAgreement()
-    Agreement->>Contractly: stakedFunds()
-    Note over Agreement,Contractly: If all parties staked
-    Agreement->>Contractly: lockAgreement()
-```
+### Core Features of Contractly:
+1. **Self-Enforcing Contracts**: Automatically execute terms when conditions are met or breached.
+2. **Delivery Guarantees**: Focused on D2C brands, ensuring delivery commitments are verifiable and enforceable.
+3. **Staked Funds**: Brands stake funds to cover potential penalties, ensuring accountability.
+4. **Automatic Compensation**: If delivery is delayed, penalties are automatically transferred to the customer's wallet without manual claims or disputes.
+5. **Customer Wallet Integration**: Customers only need to provide their wallet address (no connection necessary) to participate in the trustless system.
 
-## 3. Agreement State Flow
+### Smart Contract Features:
+#### **Contractly.sol** (Base Contract):
+- **Digital Agreement Creation**: Holds party information, signing, and staking of funds.
+- **Agreement Statuses**:
+  - **Pending**: Agreement is created and waits for all required signings and stakings.
+  - **Locked**: Agreement is locked once all requirements are met.
+  - **Fulfilled**: Agreement terms are fulfilled, and staked funds are returned to the original stakers.
+  - **Breached**: If terms are breached, the breaching party's staked funds are distributed to other parties based on their staking ratio. Non-breaching parties receive their original stakes.
+  - **DisputeWindow**: A time interval after agreement expiry allows disputes to be raised.
+  - **Disputed**: Disputes can be resolved through mechanisms like voting or third-party involvement.
+  - **Canceled**: Agreement is canceled, and staked funds are returned to the original parties.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Created: createAgreement
-    Created --> Signed: signAgreementWithStakeDetails
-    Signed --> Locked: stakeAgreement (all parties)
-    Locked --> Fulfilled: fulfillAgreement
-    Locked --> Breached: breachAgreement
-    Fulfilled --> [*]
-    Breached --> [*]
-```
+#### **Delivery.sol** (v1 Use Case):
+- **Delivery Creation**: Creates a delivery agreement and checks if delivery is completed on time.
+- **Signing, Staking, and Locking**: Handles the signing, staking, and locking of the delivery contract.
+- **Fulfill/Breach Agreement**: Calls the `fulfill` or `breach` functions in `Contractly.sol` based on off-chain delivery status.
+- **Status Check**: Uses **Gelato Network** to trigger functions in `Delivery.sol` based on off-chain delivery status.
 
-## 4. Class Diagram
+### Future Enhancements:
+- **Additional Use Cases**: Extend the platform to support other types of self-enforcing contracts (e.g., service agreements, rental agreements, etc.).
+- **Advanced Dispute Resolution**: Implement more sophisticated dispute resolution mechanisms.
+- **Multi-Chain Support**: Expand compatibility to other blockchain networks for greater flexibility and scalability.
+- **Enhanced UI/UX**: Improve the user interface to make it even more intuitive and accessible for non-technical users.
 
-```mermaid
-classDiagram
-    class Agreement {
-        +createAgreement()
-        +signAgreementWithStakeDetails()
-        +stakeAgreement()
-        +fulfillAgreement()
-        +breachAgreement()
-        +getAgreementDetails()
-        -addParty()
-    }
-    
-    class Contractly {
-        +createAgreement()
-        +getParty()
-        +signAgreement()
-        +addParty()
-        +stakeAgreement()
-        +lockAgreement()
-        +fulfillAgreement()
-        +breachAgreement()
-        +getAgreement()
-        +stakedFunds()
-    }
-    
-    Agreement --> Contractly : Uses
-```
+## Target Users
 
+### Primary Users:
+1. **Direct-to-Consumer (D2C) Brands**:  
+   - Brands seeking to build trust, reduce customer service issues, and differentiate themselves through verifiable delivery commitments.  
+   - Especially beneficial for premium categories where delivery expectations are high.  
 
-<h4 align="center">
-  <a href="https://docs.scaffoldeth.io">Documentation</a> |
-  <a href="https://scaffoldeth.io">Website</a>
-</h4>
+### Secondary Users:
+2. **Customers**:  
+   - Benefit from guaranteed compensation without friction when deliveries are delayed.  
+   - Builds loyalty and trust in the brands they purchase from.  
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Ethereum blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+## Contributing
 
-⚙️ Built using NextJS, RainbowKit, Foundry, Wagmi, Viem, and Typescript.
+We welcome contributions! To contribute:
+1. Fork the repository.
+2. Create a new branch:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. Commit your changes:
+   ```bash
+   git commit -m "Add your commit message here"
+   ```
+4. Push to your branch:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+5. Open a pull request and describe your changes.
 
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🪝 **[Custom hooks](https://docs.scaffoldeth.io/hooks/)**: Collection of React hooks wrapper around [wagmi](https://wagmi.sh/) to simplify interactions with smart contracts with typescript autocompletion.
-- 🧱 [**Components**](https://docs.scaffoldeth.io/components/): Collection of common web3 components to quickly build your frontend.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
+## License
 
-![Debug Contracts tab](https://github.com/scaffold-eth/scaffold-eth-2/assets/55535804/b237af0c-5027-4849-a5c1-2e31495cccb1)
+This project is licensed under the **MIT License**.
 
-## Requirements
+## Contact
 
-Before you begin, you need to install the following tools:
+For questions or feedback, feel free to reach out:
 
-- [Node (>= v20.18.3)](https://nodejs.org/en/download/)
-- Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
-- [Git](https://git-scm.com/downloads)
-
-## Quickstart
-
-To get started with Scaffold-ETH 2, follow the steps below:
-
-1. Install dependencies if it was skipped in CLI:
-
-```
-cd my-dapp-example
-yarn install
-```
-
-2. Run a local network in the first terminal:
-
-```
-yarn chain
-```
-
-This command starts a local Ethereum network using Foundry. The network runs on your local machine and can be used for testing and development. You can customize the network configuration in `packages/foundry/foundry.toml`.
-
-3. On a second terminal, deploy the test contract:
-
-```
-yarn deploy
-```
-
-This command deploys a test smart contract to the local network. The contract is located in `packages/foundry/contracts` and can be modified to suit your needs. The `yarn deploy` command uses the deploy script located in `packages/foundry/script` to deploy the contract to the network. You can also customize the deploy script.
-
-4. On a third terminal, start your NextJS app:
-
-```
-yarn start
-```
-
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the `Debug Contracts` page. You can tweak the app config in `packages/nextjs/scaffold.config.ts`.
-
-Run smart contract test with `yarn foundry:test`
-
-- Edit your smart contracts in `packages/foundry/contracts`
-- Edit your frontend homepage at `packages/nextjs/app/page.tsx`. For guidance on [routing](https://nextjs.org/docs/app/building-your-application/routing/defining-routes) and configuring [pages/layouts](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts) checkout the Next.js documentation.
-- Edit your deployment scripts in `packages/foundry/script`
-
-
-## Documentation
-
-Visit our [docs](https://docs.scaffoldeth.io) to learn how to start building with Scaffold-ETH 2.
-
-To know more about its features, check out our [website](https://scaffoldeth.io).
-
-## Contributing to Scaffold-ETH 2
-
-We welcome contributions to Scaffold-ETH 2!
-
-Please see [CONTRIBUTING.MD](https://github.com/scaffold-eth/scaffold-eth-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-ETH 2.
+- **Jayant Nagle**  
+  - GitHub: [@jayantna](https://github.com/jayantna)  
+  - Email: [contact@jayantdevhub.in](mailto:contact@jayantdevhub.in)
